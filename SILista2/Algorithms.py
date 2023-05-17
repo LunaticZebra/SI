@@ -1,74 +1,68 @@
 import math
 import timeit
-
+import time
 import Heuristics
 from Board import Board
 from Node import Node
 
 
-def generate_decision_tree(board, initial_depth):
-    root = Node(board)
-    def rec_generate(node, depth):
-        if depth == 0:
-            return None
-        moves = node.data.get_valid_moves(node.data.current_player)
-        for row, col in moves:
-            board_copy = node.data.copy()
-            board_copy.make_move(row, col)
-            child = Node(board_copy)
-            child.parent = (row, col)
-            node.children.append(child)
-            rec_generate(child, depth - 1)
-
-    rec_generate(root, initial_depth)
-    return root
-
-
-def minimax(maximising_player, node, depth, heuristic):
-    best_node = node
+def minimax(maximising_player, board: Board, depth, heuristic, curr_player):
+    best_node = board
     if depth == 0:
-        return heuristic(node.data), node
+        return heuristic(board), board
     elif maximising_player:
         best_val = -math.inf
-        for child in node.children:
-            child_val, _ = minimax(False, child, depth - 1, heuristic)
+        for row, col in board.get_valid_moves(curr_player):
+            new_board = board.copy()
+            new_board.make_move(row, col)
+
+            child_val, _ = minimax(False, new_board, depth - 1, heuristic, curr_player)
             if child_val > best_val:
                 best_val = child_val
-                best_node = child
+                best_node = new_board
     else:
         best_val = math.inf
 
-        for child in node.children:
-            child_val, _ = minimax(True, child, depth - 1, heuristic)
+        for row, col in board.get_valid_moves(curr_player):
+            new_board = board.copy()
+            new_board.make_move(row, col)
+
+            child_val, _ = minimax(True, new_board, depth - 1, heuristic, curr_player)
             if child_val < best_val:
                 best_val = child_val
-                best_node = child
+                best_node = new_board
 
     return best_val, best_node
 
 
-def alpha_beta_cut(maximising_player, node, depth, heuristic, alpha, beta):
-    best_node = node
+def alpha_beta_cut(maximising_player, board: Board, depth, heuristic, alpha, beta, curr_player):
+    best_node = board
     if depth == 0:
-        return heuristic(node.data), node
+        return heuristic(board), board
     elif maximising_player:
         best_val = alpha
 
-        for child in node.children:
-            child_val, _ = alpha_beta_cut(False, child, depth - 1, heuristic, best_val, beta)
+        for row, col in board.get_valid_moves(curr_player):
+            new_board = board.copy()
+            new_board.make_move(row, col)
+
+            child_val, _ = alpha_beta_cut(False, new_board, depth - 1, heuristic, best_val, beta, curr_player)
             if child_val > best_val:
                 best_val = child_val
-                best_node = child
+                best_node = new_board
                 if beta <= best_val:
                     break
     else:
         best_val = beta
 
-        for child in node.children:
-            child_val, _ = alpha_beta_cut(True, child, depth - 1, heuristic, alpha, best_val)
+        for row, col in board.get_valid_moves(curr_player):
+            new_board = board.copy()
+            new_board.make_move(row, col)
+
+            child_val, _ = alpha_beta_cut(True, new_board, depth - 1, heuristic, alpha, best_val, curr_player)
             if child_val < best_val:
                 best_val = child_val
-                best_node = child
+                best_node = new_board
                 if alpha >= best_val:
                     break
 
@@ -87,20 +81,11 @@ def count_nodes(root):
 
 
 if __name__ == '__main__':
-    root = Board()
-    depth = 6
-    tree_root = generate_decision_tree(root, depth)
-    print(count_nodes(tree_root))
-    execution_time_tree_generation = timeit.timeit(lambda: generate_decision_tree(root, depth), number=1)
-    execution_time_minimax = timeit.timeit(lambda: minimax(True, tree_root, depth, Heuristics.least_opponent_moves), number=1)
-    score2, score_node2 = minimax(True, tree_root, depth, Heuristics.least_opponent_moves)
-    score, score_node = alpha_beta_cut(True, tree_root, depth, Heuristics.least_opponent_moves, -math.inf, math.inf)
-    execution_time_alpha_beta = timeit.timeit(lambda: alpha_beta_cut(True, tree_root, depth, Heuristics.least_opponent_moves, -math.inf, math.inf), number=1)
-    print(execution_time_tree_generation)
-    print(execution_time_minimax)
-    print(execution_time_alpha_beta)
-    print(score)
-    score_node.data.print_board()
-    print(score2)
-    score_node2.data.print_board()
-    print(score_node2.parent)
+    board = Board()
+    depth = 5
+    start_time = time.time()
+    _, node_minimax = minimax(True, board, depth, Heuristics.simple_count)
+    print(time.time() - start_time)
+    start_time = time.time()
+    _, node_alphabeta = alpha_beta_cut(True, board, depth, Heuristics.simple_count, -math.inf, math.inf)
+    print(time.time() - start_time)
